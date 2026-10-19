@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dzienniczek Malucha</title>
+  <!-- Biblioteka Chart.js do generowania wykresów -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --bg: #f1f5f9;
+      --card-bg: #ffffff;
+      --text: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --danger: #ef4444;
+      --success: #16a34a;
+    }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+      margin: 0; 
+      padding: 16px; 
+      background: var(--bg); 
+      color: var(--text);
+      max-width: 650px;
+      margin-left: auto;
+      margin-right: auto;
+      padding-bottom: 40px;
+    }
+    h1 { font-size: 1.4rem; text-align: center; margin-bottom: 12px; color: var(--primary); }
+    
+    /* Pasek zakładek (Nawigacja) */
+    .tabs-nav {
+      display: flex;
+      background: #e2e8f0;
+      padding: 4px;
+      border-radius: 12px;
+      margin-bottom: 16px;
+      gap: 4px;
+      position: sticky;
+      top: 8px;
+      z-index: 10;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    }
+    .tab-btn {
+      flex: 1;
+      background: transparent;
+      color: var(--muted);
+      border: none;
+      padding: 10px 6px;
+      margin: 0;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .tab-btn:hover {
+      background: rgba(255,255,255,0.5);
+      color: var(--text);
+    }
+    .tab-btn.active {
+      background: var(--card-bg);
+      color: var(--primary);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    /* Sekcje zakładek */
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+
+    .card { 
+      background: var(--card-bg); 
+      padding: 16px; 
+      border-radius: 12px; 
+      margin-bottom: 16px; 
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05); 
+      border: 1px solid var(--border);
+    }
+    h2 { margin-top: 0; margin-bottom: 12px; font-size: 1.1rem; display: flex; align-items: center; gap: 8px; }
+    label { font-size: 0.85rem; color: var(--muted); font-weight: 500; display: block; margin-top: 8px; }
+    input, textarea, button { 
+      width: 100%; 
+      padding: 10px 12px; 
+      margin: 4px 0 8px 0; 
+      border: 1px solid #cbd5e1; 
+      border-radius: 8px; 
+      box-sizing: border-box; 
+      font-size: 0.95rem;
+    }
+    input:focus, textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+    }
+    .row { display: flex; gap: 10px; }
+    .row > div { flex: 1; }
+    .action-btn { 
+      background: var(--primary); 
+      color: white; 
+      border: none; 
+      font-weight: 600; 
+      cursor: pointer; 
+      margin-top: 8px;
+      transition: background 0.15s;
+    }
+    .action-btn:hover { background: var(--primary-hover); }
+    
+    /* Przełączniki dla wykresu mleka */
+    .toggle-group {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+    .toggle-btn {
+      margin: 0;
+      padding: 6px 12px;
+      font-size: 0.85rem;
+      background: #e2e8f0;
+      color: var(--text);
+      border: none;
+      border-radius: 6px;
+      width: auto;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .toggle-btn.active {
+      background: var(--primary);
+      color: white;
+    }
+
+    .chart-container {
+      position: relative;
+      width: 100%;
+      height: 280px;
+      margin-bottom: 24px;
+    }
+
+    .log-section { margin-bottom: 20px; }
+    .log-section h3 { font-size: 0.95rem; color: var(--muted); margin: 12px 0 6px 0; border-bottom: 2px solid var(--border); padding-bottom: 4px; }
+    .log-item { 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center;
+      border-bottom: 1px solid var(--border); 
+      padding: 8px 0; 
+      font-size: 0.9rem; 
+    }
+    .log-item:last-child { border-bottom: none; }
+    .badge {
+      background: #e0e7ff;
+      color: #1e40af;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      margin-left: 4px;
+      display: inline-block;
+    }
+    .badge-green { background: #dcfce7; color: #166534; }
+    .del-btn {
+      background: transparent;
+      color: var(--muted);
+      width: auto;
+      padding: 4px 8px;
+      margin: 0;
+      font-size: 0.8rem;
+      border: 1px solid transparent;
+      cursor: pointer;
+    }
+    .del-btn:hover { color: var(--danger); background: #fee2e2; }
+    .empty-msg { color: var(--muted); font-size: 0.85rem; font-style: italic; padding: 8px 0; }
+    .profile-summary {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      margin-bottom: 10px;
+    }
+    .hint { font-size: 0.8rem; color: var(--muted); margin-top: -4px; margin-bottom: 8px; }
+
+    /* Powiadomienie o zapisaniu (Toast) */
+    #toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--success);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 24px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      display: none;
+      z-index: 100;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>👶 Dzienniczek Malucha</h1>
+
+  <!-- PASEK NAWIGACJI ZAKŁADEK -->
+  <div class="tabs-nav">
+    <button id="nav-dodaj" class="tab-btn active" onclick="przelaczZakladke('dodaj')">➕ Dodaj wpis</button>
+    <button id="nav-historia" class="tab-btn" onclick="przelaczZakladke('historia')">📋 Historia</button>
+    <button id="nav-wykresy" class="tab-btn" onclick="przelaczZakladke('wykresy')">📈 Wykresy</button>
+  </div>
+
+  <!-- ==========================================
+       ZAKŁADKA 1: DODAWANIE WPISÓW I PROFIL
+       ========================================== -->
+  <div id="tab-dodaj" class="tab-content active">
+    
+    <!-- Dane urodzeniowe dziecka -->
+    <div class="card">
+      <h2>🌟 Dane urodzeniowe (Profil)</h2>
+      <div id="profilPodsumowanie" class="profile-summary" style="display:none;"></div>
+      <div id="profilFormularz">
+        <div class="row">
+          <div>
+            <label>Imię dziecka</label>
+            <input type="text" id="imieDziecka" placeholder="np. Jaśminka">
+          </div>
+          <div>
+            <label>Data urodzenia</label>
+            <input type="date" id="dataUrodzenia">
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label>Waga przy porodzie (g)</label>
+            <input type="number" id="wagaStart" placeholder="np. 3200">
+          </div>
+          <div>
+            <label>Długość przy porodzie (cm)</label>
+            <input type="number" id="dlugoscStart" placeholder="np. 53" step="0.5">
+          </div>
+        </div>
+        <button class="action-btn" onclick="zapiszProfil()">Zapisz dane urodzeniowe</button>
+      </div>
+      <button id="edytujProfilBtn" class="action-btn" onclick="pokazEdycjeProfilu()" style="display:none; background:#64748b; margin-top:4px;">Edytuj dane urodzeniowe</button>
+    </div>
+
+    <!-- Karmienie -->
+    <div class="card">
+      <h2>🍼 Dodaj karmienie</h2>
+      <label>Data i godzina</label>
+      <input type="datetime-local" id="czasKarmienia">
+      <label>Ilość wypitego mleka (ml)</label>
+      <input type="number" id="iloscMleka" placeholder="np. 120">
+      <button class="action-btn" onclick="zapiszKarmienie()">Zapisz karmienie</button>
+    </div>
+
+    <!-- Kupka -->
+    <div class="card">
+      <h2>💩 Dodaj kupkę</h2>
+      <label>Data i godzina</label>
+      <input type="datetime-local" id="czasKupki">
+      <label>Komentarz (opcjonalnie)</label>
+      <textarea id="komentarzKupka" rows="2" placeholder="Kolor, konsystencja, ewentualne uwagi..."></textarea>
+      <button class="action-btn" onclick="zapiszKupke()">Zapisz wypróżnienie</button>
+    </div>
+
+    <!-- Pomiary Wagi i Wzrostu -->
+    <div class="card">
+      <h2>📏 Nowy pomiar wagi / wzrostu</h2>
+      <p class="hint">Wypełnij oba pola lub tylko jedno z nich (np. samą wagę).</p>
+      <label>Data pomiaru (bieżąca lub wsteczna)</label>
+      <input type="date" id="dataPomiaru">
+      <div class="row">
+        <div>
+          <label>Waga (g) – opcjonalnie</label>
+          <input type="number" id="waga" placeholder="np. 4150">
+        </div>
+        <div>
+          <label>Wzrost (cm) – opcjonalnie</label>
+          <input type="number" id="wzrost" placeholder="np. 56" step="0.5">
+        </div>
+      </div>
+      <button class="action-btn" onclick="zapiszPomiar()">Zapisz pomiar</button>
+    </div>
+
+  </div>
+
+  <!-- ==========================================
+       ZAKŁADKA 2: HISTORIA WPISÓW
+       ========================================== -->
+  <div id="tab-historia" class="tab-content">
+    <div class="card">
+      <h2>📋 Historia wszystkich wpisów</h2>
+      <div id="historia"></div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       ZAKŁADKA 3: WYKRESY I STATYSTYKI
+       ========================================== -->
+  <div id="tab-wykresy" class="tab-content">
+    <div class="card">
+      <h2>📈 Przyrost wagi i wzrostu</h2>
+      <p class="hint">Wykres łączy punkty automatycznie, nawet jeśli w danym dniu podano tylko jeden z parametrów.</p>
+      <div class="chart-container">
+        <canvas id="wykresWzrostuWagi"></canvas>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <h2 style="margin: 0;">🍼 Spożycie mleka (ml)</h2>
+        <div class="toggle-group" style="margin: 0;">
+          <button id="btnDzienny" class="toggle-btn active" onclick="zmienTrybMleka('dzienny')">Dzienne</button>
+          <button id="btnTygodniowy" class="toggle-btn" onclick="zmienTrybMleka('tygodniowy')">Tygodniowe</button>
+        </div>
+      </div>
+      <div class="chart-container" style="margin-bottom: 0;">
+        <canvas id="wykresMleka"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dymek z potwierdzeniem zapisu -->
+  <div id="toast">✅ Zapisano wpis!</div>
+
+  <script>
+    let instancjaWykresuWagi = null;
+    let instancjaWykresuMleka = null;
+    let trybWykresuMleka = 'dzienny'; // 'dzienny' lub 'tygodniowy'
+
+    // --- PRZEŁĄCZANIE ZAKŁADEK ---
+    function przelaczZakladke(nazwaZakladki) {
+      // Ukryj wszystkie zakładki i odznacz przyciski
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+
+      // Aktywuj wybraną zakładkę i przycisk
+      document.getElementById('tab-' + nazwaZakladki).classList.add('active');
+      document.getElementById('nav-' + nazwaZakladki).classList.add('active');
+
+      // Jeśli otwieramy zakładkę wykresów, wyrenderuj/przelicz wykresy na widocznym elemencie canvas
+      if (nazwaZakladki === 'wykresy') {
+        aktualizujWykresWzrostuWagi();
+        aktualizujWykresMleka();
+      }
+    }
+
+    function pokazToast(komunikat) {
+      const toast = document.getElementById('toast');
+      toast.textContent = komunikat;
+      toast.style.display = 'block';
+      setTimeout(() => {
+        toast.style.display = 'none';
+      }, 2200);
+    }
+
+    function ustawDomyslnyCzas() {
+      const teraz = new Date();
+      teraz.setMinutes(teraz.getMinutes() - teraz.getTimezoneOffset());
+      const isoTeraz = teraz.toISOString().slice(0, 16);
+      const isoDzis = teraz.toISOString().slice(0, 10);
+
+      document.getElementById('czasKarmienia').value = isoTeraz;
+      document.getElementById('czasKupki').value = isoTeraz;
+      document.getElementById('dataPomiaru').value = isoDzis;
+    }
+
+    function pobierzDane(klucz) {
+      const dane = JSON.parse(localStorage.getItem(klucz) || '[]');
+      let zmieniono = false;
+      dane.forEach((el, idx) => {
+        if (!el.id) {
+          el.id = Date.now() + idx + Math.random();
+          zmieniono = true;
+        }
+      });
+      if (zmieniono) localStorage.setItem(klucz, JSON.stringify(dane));
+      return dane;
+    }
+
+    function zapiszWpis(klucz, obiekt, komunikatToast) {
+      const dane = pobierzDane(klucz);
+      obiekt.id = Date.now() + Math.random();
+      dane.unshift(obiekt);
+      localStorage.setItem(klucz, JSON.stringify(dane));
+      odswiezWidok();
+      pokazToast(komunikatToast || "✅ Zapisano wpis!");
+    }
+
+    function usunWpisPoId(klucz, id) {
+      const dane = pobierzDane(klucz).filter(item => item.id !== id);
+      localStorage.setItem(klucz, JSON.stringify(dane));
+      odswiezWidok();
+    }
+
+    // --- OBSŁUGA PROFILU URODZENIOWEGO ---
+    function zapiszProfil() {
+      const imie = document.getElementById('imieDziecka').value.trim();
+      const dataUr = document.getElementById('dataUrodzenia').value;
+      const wagaStart = document.getElementById('wagaStart').value;
+      const dlugoscStart = document.getElementById('dlugoscStart').value;
+
+      if (!dataUr || (!wagaStart && !dlugoscStart)) {
+        alert("Podaj datę urodzenia oraz przynajmniej wagę lub długość przy porodzie.");
+        return;
+      }
+
+      const profil = {
+        imie: imie || "Maluszek",
+        dataUr,
+        wagaStart: wagaStart ? Number(wagaStart) : null,
+        dlugoscStart: dlugoscStart ? Number(dlugoscStart) : null
+      };
+
+      localStorage.setItem('profilDziecka', JSON.stringify(profil));
+      odswiezProfil();
+      odswiezWidok();
+      pokazToast("✅ Zapisano profil dziecka!");
+    }
+
+    function pokazEdycjeProfilu() {
+      document.getElementById('profilFormularz').style.display = 'block';
+      document.getElementById('edytujProfilBtn').style.display = 'none';
+    }
+
+    function odswiezProfil() {
+      const zapisany = localStorage.getItem('profilDziecka');
+      const podsumowanieDiv = document.getElementById('profilPodsumowanie');
+      const formularzDiv = document.getElementById('profilFormularz');
+      const edytujBtn = document.getElementById('edytujProfilBtn');
+
+      if (!zapisany) {
+        podsumowanieDiv.style.display = 'none';
+        formularzDiv.style.display = 'block';
+        edytujBtn.style.display = 'none';
+        return;
+      }
+
+      const p = JSON.parse(zapisany);
+      document.getElementById('imieDziecka').value = p.imie;
+      document.getElementById('dataUrodzenia').value = p.dataUr;
+      document.getElementById('wagaStart').value = p.wagaStart || '';
+      document.getElementById('dlugoscStart').value = p.dlugoscStart || '';
+
+      let tekst = `<strong>${p.imie}</strong> (ur. ${p.dataUr})<br>`;
+      if (p.wagaStart) tekst += `Waga urodzeniowa: <strong>${p.wagaStart} g</strong> `;
+      if (p.dlugoscStart) tekst += `| Długość: <strong>${p.dlugoscStart} cm</strong>`;
+
+      podsumowanieDiv.innerHTML = tekst;
+      podsumowanieDiv.style.display = 'block';
+      formularzDiv.style.display = 'none';
+      edytujBtn.style.display = 'block';
+    }
+
+    // --- ZAPISYWANIE DANYCH ---
+    function zapiszPomiar() {
+      const data = document.getElementById('dataPomiaru').value;
+      const wagaTekst = document.getElementById('waga').value.trim();
+      const wzrostTekst = document.getElementById('wzrost').value.trim();
+
+      if (!data) return alert("Wybierz datę pomiaru!");
+      if (!wagaTekst && !wzrostTekst) {
+        return alert("Wpisz wagę lub wzrost (nie musisz podawać obu naraz)!");
+      }
+
+      zapiszWpis('pomiary', {
+        data: data,
+        waga: wagaTekst !== '' ? Number(wagaTekst) : null,
+        wzrost: wzrostTekst !== '' ? Number(wzrostTekst) : null
+      }, "📏 Zapisano pomiar!");
+
+      document.getElementById('waga').value = '';
+      document.getElementById('wzrost').value = '';
+    }
+
+    function zapiszKarmienie() {
+      const czas = document.getElementById('czasKarmienia').value;
+      const ml = document.getElementById('iloscMleka').value.trim();
+      if (!ml) return alert("Podaj ilość wypitego mleka w ml!");
+      zapiszWpis('karmienia', { czas, ml: Number(ml) }, `🍼 Zapisano karmienie (${ml} ml)!`);
+      document.getElementById('iloscMleka').value = '';
+    }
+
+    function zapiszKupke() {
+      const czas = document.getElementById('czasKupki').value;
+      const komentarz = document.getElementById('komentarzKupka').value.trim();
+      zapiszWpis('kupki', { czas, komentarz }, "💩 Zapisano wypróżnienie!");
+      document.getElementById('komentarzKupka').value = '';
+    }
+
+    // --- LOGIKA WYKRESÓW ---
+    function zmienTrybMleka(tryb) {
+      trybWykresuMleka = tryb;
+      document.getElementById('btnDzienny').classList.toggle('active', tryb === 'dzienny');
+      document.getElementById('btnTygodniowy').classList.toggle('active', tryb === 'tygodniowy');
+      aktualizujWykresMleka();
+    }
+
+    function aktualizujWykresWzrostuWagi() {
+      const profil = JSON.parse(localStorage.getItem('profilDziecka') || 'null');
+      const pomiary = pobierzDane('pomiary');
+
+      const mapaDat = {};
+
+      if (profil && profil.dataUr) {
+        mapaDat[profil.dataUr] = {
+          waga: profil.wagaStart || null,
+          wzrost: profil.dlugoscStart || null
+        };
+      }
+
+      const posortowane = [...pomiary].sort((a, b) => a.data.localeCompare(b.data));
+      posortowane.forEach(p => {
+        if (!mapaDat[p.data]) {
+          mapaDat[p.data] = { waga: null, wzrost: null };
+        }
+        if (p.waga !== null && p.waga !== undefined && p.waga !== 0) {
+          mapaDat[p.data].waga = p.waga;
+        }
+        if (p.wzrost !== null && p.wzrost !== undefined && p.wzrost !== 0) {
+          mapaDat[p.data].wzrost = p.wzrost;
+        }
+      });
+
+      const etykietyDat = Object.keys(mapaDat).sort();
+      const daneWagi = etykietyDat.map(d => mapaDat[d].waga);
+      const daneWzrostu = etykietyDat.map(d => mapaDat[d].wzrost);
+
+      const ctx = document.getElementById('wykresWzrostuWagi').getContext('2d');
+      if (instancjaWykresuWagi) instancjaWykresuWagi.destroy();
+
+      instancjaWykresuWagi = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: etykietyDat,
+          datasets: [
+            {
+              label: 'Waga (g)',
+              data: daneWagi,
+              borderColor: '#2563eb',
+              backgroundColor: 'rgba(37, 99, 235, 0.1)',
+              yAxisID: 'yWaga',
+              spanGaps: true,
+              tension: 0.25,
+              pointRadius: 4
+            },
+            {
+              label: 'Wzrost (cm)',
+              data: daneWzrostu,
+              borderColor: '#16a34a',
+              backgroundColor: 'rgba(22, 163, 74, 0.1)',
+              yAxisID: 'yWzrost',
+              spanGaps: true,
+              tension: 0.25,
+              pointRadius: 4
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          scales: {
+            yWaga: {
+              type: 'linear',
+              display: true,
+              position: 'left',
+              title: { display: true, text: 'Waga (g)', color: '#2563eb' }
+            },
+            yWzrost: {
+              type: 'linear',
+              display: true,
+              position: 'right',
+              title: { display: true, text: 'Wzrost (cm)', color: '#16a34a' },
+              grid: { drawOnChartArea: false }
+            }
+          }
+        }
+      });
+    }
+
+    function wyznaczPoniedzialek(dataStr) {
+      const [rok, miesiac, dzien] = dataStr.split('-').map(Number);
+      const d = new Date(rok, miesiac - 1, dzien);
+      const dzienTygodnia = d.getDay();
+      const roznica = d.getDate() - dzienTygodnia + (dzienTygodnia === 0 ? -6 : 1);
+      const pon = new Date(d.setDate(roznica));
+      const r = pon.getFullYear();
+      const m = String(pon.getMonth() + 1).padStart(2, '0');
+      const dz = String(pon.getDate()).padStart(2, '0');
+      return `${r}-${m}-${dz}`;
+    }
+
+    function aktualizujWykresMleka() {
+      const karmienia = pobierzDane('karmienia');
+      const sumy = {};
+
+      karmienia.forEach(k => {
+        if (!k.czas) return;
+        const samaData = k.czas.slice(0, 10);
+        let kluczGrupowania = samaData;
+
+        if (trybWykresuMleka === 'tygodniowy') {
+          kluczGrupowania = wyznaczPoniedzialek(samaData);
+        }
+
+        sumy[kluczGrupowania] = (sumy[kluczGrupowania] || 0) + Number(k.ml);
+      });
+
+      const posortowaneKlucze = Object.keys(sumy).sort();
+      const etykiety = posortowaneKlucze.map(klucz => 
+        trybWykresuMleka === 'tygodniowy' ? `Tydz. od ${klucz}` : klucz
+      );
+      const wartosciMl = posortowaneKlucze.map(klucz => sumy[klucz]);
+
+      const ctx = document.getElementById('wykresMleka').getContext('2d');
+      if (instancjaWykresuMleka) instancjaWykresuMleka.destroy();
+
+      instancjaWykresuMleka = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: etykiety,
+          datasets: [{
+            label: trybWykresuMleka === 'dzienny' ? 'Dzienne spożycie (ml)' : 'Tygodniowe spożycie (ml)',
+            data: wartosciMl,
+            backgroundColor: '#3b82f6',
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: 'Ilość mleka (ml)' }
+            }
+          }
+        }
+      });
+    }
+
+    // --- WYŚWIETLANIE HISTORII I ODŚWIEŻANIE ---
+    function odswiezWidok() {
+      const historiaDiv = document.getElementById('historia');
+      
+      const pomiary = pobierzDane('pomiary').sort((a, b) => b.data.localeCompare(a.data));
+      const karmienia = pobierzDane('karmienia').sort((a, b) => b.czas.localeCompare(a.czas));
+      const kupki = pobierzDane('kupki').sort((a, b) => b.czas.localeCompare(a.czas));
+      const profil = JSON.parse(localStorage.getItem('profilDziecka') || 'null');
+
+      // Aktualizacja liczników na przycisku zakładki Historia
+      const lacznaLiczbaWpisow = pomiary.length + karmienia.length + kupki.length;
+      document.getElementById('nav-historia').textContent = `📋 Historia (${lacznaLiczbaWpisow})`;
+
+      let html = '';
+
+      // 1. Sekcja pomiarów wagi i wzrostu
+      html += '<div class="log-section"><h3>📏 Pomiary wagi i wzrostu</h3>';
+      if (pomiary.length === 0) {
+        html += '<div class="empty-msg">Brak zapisanych pomiarów.</div>';
+      } else {
+        pomiary.forEach(p => {
+          let szczegoly = '';
+          
+          if (p.waga !== null && p.waga !== undefined && p.waga !== 0) {
+            let roznicaWagi = '';
+            if (profil && profil.wagaStart) {
+              const diff = p.waga - profil.wagaStart;
+              const znak = diff >= 0 ? '+' : '';
+              roznicaWagi = ` <small>(${znak}${diff}g)</small>`;
+            }
+            szczegoly += `<span class="badge">⚖️ ${p.waga} g${roznicaWagi}</span>`;
+          }
+
+          if (p.wzrost !== null && p.wzrost !== undefined && p.wzrost !== 0) {
+            let roznicaWzrostu = '';
+            if (profil && profil.dlugoscStart) {
+              const diff = (p.wzrost - profil.dlugoscStart).toFixed(1);
+              const znak = diff >= 0 ? '+' : '';
+              roznicaWzrostu = ` <small>(${znak}${diff}cm)</small>`;
+            }
+            szczegoly += `<span class="badge badge-green">📏 ${p.wzrost} cm${roznicaWzrostu}</span>`;
+          }
+
+          html += `
+            <div class="log-item">
+              <div><strong>${p.data}</strong> ${szczegoly}</div>
+              <button class="del-btn" onclick="usunWpisPoId('pomiary', ${p.id})" title="Usuń wpis">✕</button>
+            </div>`;
+        });
+      }
+      html += '</div>';
+
+      // 2. Sekcja karmień
+      html += '<div class="log-section"><h3>🍼 Karmienia</h3>';
+      if (karmienia.length === 0) {
+        html += '<div class="empty-msg">Brak wpisów o karmieniu.</div>';
+      } else {
+        karmienia.forEach(k => {
+          html += `
+            <div class="log-item">
+              <div>${k.czas.replace('T', ' ')} — <span class="badge">${k.ml} ml</span></div>
+              <button class="del-btn" onclick="usunWpisPoId('karmienia', ${k.id})" title="Usuń wpis">✕</button>
+            </div>`;
+        });
+      }
+      html += '</div>';
+
+      // 3. Sekcja wypróżnień
+      html += '<div class="log-section"><h3>💩 Wypróżnienia (Kupki)</h3>';
+      if (kupki.length === 0) {
+        html += '<div class="empty-msg">Brak wpisów o wypróżnieniach.</div>';
+      } else {
+        kupki.forEach(k => {
+          html += `
+            <div class="log-item">
+              <div>${k.czas.replace('T', ' ')} — <em>${k.komentarz || 'brak uwag'}</em></div>
+              <button class="del-btn" onclick="usunWpisPoId('kupki', ${k.id})" title="Usuń wpis">✕</button>
+            </div>`;
+        });
+      }
+      html += '</div>';
+
+      historiaDiv.innerHTML = html;
+
+      // Jeśli użytkownik jest aktualnie na zakładce wykresów, odśwież je od razu
+      if (document.getElementById('tab-wykresy').classList.contains('active')) {
+        aktualizujWykresWzrostuWagi();
+        aktualizujWykresMleka();
+      }
+    }
+
+    // Inicjalizacja przy starcie
+    ustawDomyslnyCzas();
+    odswiezProfil();
+    odswiezWidok();
+  </script>
+</body>
+</html>
